@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Sweets Cassio</title>
+	</head>
+	
+	<body>
+	<th:block th:fragment="pageHeader">
+		<div class="headerTop">
+			<h1 class="logo"><a href="/cassiopeia/">Sweets Cassio</a></h1>
+			
+			<span class="signup">
+				<a href="/cassiopeia/user/" th:href="@{/cassiopeia/user/}">
+				新規ユーザ登録はこちら
+				</a>
+			</span>
+			<span class="welcomeMsg"
+				th:text="'ようこそ！ ' + ${loginSession == null || loginSession.getUserName() == null ? 'ゲスト さん' : loginSession.getUserName() + ' さん'}" >
+			</span>
+		</div>
+		
+		<nav>
+			<div class="loginArea">
+				<input type="text" name="userName" />
+				<input type="password" name="password" />
+				
+				<input type="hidden" id="hiddenUserName" value="" />
+					
+				<button id="login" th:class="${loginSession == null || loginSession.getUserName() == null ? '' : 'hidden'}">ログイン</button>
+				<button id="logout" th:class="${loginSession == null || loginSession.getUserName() == null ? 'hidden' : ''}">ログアウト</button>
+			</div>
+			<ul class="menu">
+				<li><a href="/cassiopeia/cart/">カート</a></li>
+					
+				<li id="mypageMenu"
+						th:class="${loginSession == null || loginSession.getUserName() == null ? 'hidden' : ''}">
+					<a href="/cassiopeia/mypage/">マイページ</a>
+				</li>
+			</ul>
+		</nav>
+		
+		<!-- Modal Dialog (ログインエラー) -->
+		<div th:insert="fragments/dialog_login_error::dialogLoginError"></div>
+		
+		
+		<script src="http://code.jquery.com/jquery-3.4.1.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+		<link rel="stylesheet"
+				href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+		<script src="/js/util/stringUtil.js" th:src="@{/js/util/stringUtil.js}"></script>
+		<script src="/js/util/validator.js" th:src="@{/js/util/validator.js}"></script>
+		<script src="/js/dialogConfig.js" th:src="@{/js/dialogConfig.js}"></script>
+		<script th:inline="javascript">
+		
+		/*<![CDATA[*/
+		$(() => {
+			//login error dialog
+			$('#loginError').dialog(dialogConfig.loginError);
+
+			//login button
+			$('button#login').on('click', () => {
+				let jsonString = {
+					'userName': $('div.loginArea input[name=userName]').val(),
+					'password': $('div.loginArea input[name=password]').val()
+				};
+				
+				$.ajax({
+					type: 'POST',
+					url: '/cassiopeia/auth/login',
+					data: JSON.stringify(jsonString),
+					contentType: 'application/json',
+					datatype: 'json',
+					scriptCharset: 'utf-8'
+				})
+				.then((result) => {
+					let user = JSON.parse(result);
+					
+					if (isEmpty(user)) {
+						$('#hiddenUserName').val('');
+						$('#loginError').dialog('open');
+					} else {
+						$('#hiddenUserName').val(user['userName']);
+						login(user);
+					}
+				}, () => {
+					alert('Error: ajax connection failed.');
+				});
+			});
+
+			//logout button
+			$('button#logout').on('click', () => {
+				$.ajax({
+					type: 'POST',
+					url: '/cassiopeia/auth/logout',
+					datatype: 'json',
+					scriptCharset: 'utf-8'
+				})
+				.then((result) => {
+					$('#hiddenUserName').val('');
+					logout();
+					
+					alert('ログアウトしました。');
+					location.replace('/cassiopeia/');
+				}, () => {
+					alert('Error: ajax connection failed.');
+				});
+			});
+		});
+
+
+		//login function
+		function login(user) {
+			let userName = user['userName'];
+			$('.welcomeMsg').text(`ようこそ！ ${userName} さん`);
+			
+			if (isEmpty($('button#login').prop('class'))) {
+				$('button#login').addClass('hidden');
+				$('button#logout').removeClass('hidden');
+			}
+			$('#mypageMenu').removeClass('hidden');
+	
+			$('div.loginArea input[name=userName]').val('');
+			$('div.loginArea input[name=password]').val('');
+		}
+
+		//logout function
+		function logout() {
+			$('.welcomeMsg').text(`ようこそ！ ゲスト さん`);
+			
+			if (isEmpty($('button#logout').prop('class'))) {
+				$('button#logout').addClass('hidden');
+				$('button#login').removeClass('hidden');
+			}
+		
+			if (isEmpty($('#mypageMenu').prop('class'))) {
+				$('#mypageMenu').addClass('hidden');
+			}
+			$('div.loginArea input[name=userName]').val('');
+			$('div.loginArea input[name=password]').val('');
+		}
+		/*]]>*/
+		</script>
+	</th:block>
+	</body>
+</html>
